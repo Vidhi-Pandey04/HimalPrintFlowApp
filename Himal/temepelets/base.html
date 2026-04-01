@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <title>{% block title %}Himal{% endblock %} — Billing & Orders</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-name">Hi<span>mal</span></div>
+    <div class="brand-sub">Printers & Publishers</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Main</div>
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
+      <span class="icon">📊</span><span>Dashboard</span>
+    </a>
+    <a href="{{ url_for('orders') }}" class="nav-link {% if request.endpoint in ['orders','order_detail','new_order'] %}active{% endif %}">
+      <span class="icon">📋</span><span>Orders</span>
+    </a>
+    <a href="{{ url_for('customers') }}" class="nav-link {% if request.endpoint in ['customers','customer_detail'] %}active{% endif %}">
+      <span class="icon">👥</span><span>Customers</span>
+    </a>
+    <div class="nav-label" style="margin-top:8px;">Quick</div>
+    <a href="{{ url_for('new_order') }}" class="nav-link">
+      <span class="icon">➕</span><span>New Order</span>
+    </a>
+  </nav>
+  <div class="sidebar-footer" style="display:flex;flex-direction:column;gap:8px;">
+  <span>v1.0</span>
+  <a href="{{ url_for('logout') }}" style="color:rgba(255,255,255,0.4);font-size:11px;text-decoration:none;">⎋ Logout</a>
+</div>
+</aside>
+<div class="main">
+  {% block topbar %}{% endblock %}
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>
