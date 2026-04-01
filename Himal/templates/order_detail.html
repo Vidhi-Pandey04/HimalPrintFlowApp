@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ order.id }}{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="page-title">Order #{{ order.id }}</div>
+  <div class="topbar-actions">
+    {% set wa_msg = "Hello " ~ order.customer_name ~ "! \n\nYour order details:\n━━━━━━━━━━━━━━\n Order #" ~ order.id ~ "\n Type: " ~ order.order_type ~ "\n Qty: " ~ order.quantity ~ "\n " ~ (order.description or '') ~ "\n━━━━━━━━━━━━━━\n Design: ₹" ~ "%.0f"|format(order.design_cost) ~ "\n Printing: ₹" ~ "%.0f"|format(order.printing_cost) ~ " × " ~ order.quantity ~ "\n Discount: ₹" ~ "%.0f"|format(order.discount) ~  "\n Total: ₹" ~ "%.0f"|format(order.total) ~ "\n━━━━━━━━━━━━━━\nStatus: " ~ order.status ~ "\n\nThank you for choosing Himal Printers and Publishers !" %}
+    <a href="https://wa.me/91{{ order.phone }}?text={{ wa_msg | urlencode }}" target="_blank" class="wa-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.108.549 4.088 1.51 5.813L.05 23.5l5.845-1.533A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.898a9.878 9.878 0 01-5.032-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.864 9.864 0 012.1 12c0-5.464 4.436-9.9 9.9-9.9s9.9 4.436 9.9 9.9-4.436 9.9-9.9 9.9z"/></svg>
+      WhatsApp
+    </a>
+    <a href="{{ url_for('bill', order_id=order.id) }}" class="btn btn-outline">🧾 Bill</a>
+    <a href="{{ url_for('bill', order_id=order.id, gst=1) }}" class="btn btn-outline">📄 GST Invoice</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="two-col">
+
+  <div>
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div class="card-title">Order Information</div>
+        {% set s = order.status %}
+        <span class="badge badge-{% if s=='Pending' %}pending{% elif s=='In Design' %}design{% elif s=='Printing' %}printing{% elif s=='Delivered' %}delivered{% elif s=='Completed' %}completed{% else %}cancelled{% endif %}">{{ s }}</span>
+      </div>
+      <div class="card-body">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>Order Type</label>
+            <div class="value">{{ order.order_type }}</div>
+          </div>
+          <div class="detail-item">
+            <label>Quantity</label>
+            <div class="value">{{ order.quantity }}</div>
+          </div>
+          <div class="detail-item" style="grid-column:1/-1;">
+            <label>Description</label>
+            <div class="value">{{ order.description or '—' }}</div>
+          </div>
+          {% if order.notes %}
+          <div class="detail-item" style="grid-column:1/-1;">
+            <label>Internal Notes</label>
+            <div class="value" style="color:var(--ink-light);font-style:italic;">{{ order.notes }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="cost-breakdown">
+          <div class="cost-row">
+            <span>Design Cost</span>
+            <span>₹{{ "%.2f"|format(order.design_cost) }}</span>
+          </div>
+          <div class="cost-row">
+            <span>Printing Cost (₹{{ "%.2f"|format(order.printing_cost) }} × {{ order.quantity }})</span>
+            <span>₹{{ "%.2f"|format(order.printing_cost * order.quantity) }}</span>
+          </div>
+          {% if order.discount > 0 %}
+          <div class="cost-discount">
+            <span>Discount</span>
+            <span>− ₹{{ "%.2f"|format(order.discount) }}</span>
+          </div>
+          {% endif %}
+          <div class="cost-row total-row">
+            <span>Total</span>
+            <span>₹{{ "%.2f"|format(order.total) }}</span>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--ink-light);margin-top:8px;">
+          Created: {{ order.created_at }} &nbsp;|&nbsp; Updated: {{ order.updated_at }}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header"><div class="card-title">Update Status</div></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('update_status', order_id=order.id) }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <select name="status" style="flex:1;min-width:160px;">
+            {% for s in statuses %}
+            <option value="{{ s }}" {% if s==order.status %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-primary">Update</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Delete Order</div></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('delete_order', order_id=order.id) }}"
+              onsubmit="return confirm('Delete order #{{ order.id }}? This cannot be undone.')">
+          <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete Order</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div class="card-title">👤 Customer</div>
+        <a href="{{ url_for('customer_detail', customer_id=order.customer_id) }}" class="btn btn-sm btn-outline">Profile</a>
+      </div>
+      <div class="card-body">
+        <div style="font-size:18px;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:6px;">{{ order.customer_name }}</div>
+        <div style="font-size:14px;color:var(--ink-soft);">📱 {{ order.phone }}</div>
+        <div style="margin-top:14px;display:flex;gap:10px;">
+          <a href="https://wa.me/91{{ order.phone }}" target="_blank" class="wa-btn" style="font-size:12px;padding:7px 14px;">
+            Open WhatsApp
+          </a>
+          <a href="{{ url_for('new_order') }}?phone={{ order.phone }}" class="btn btn-outline btn-sm">+ New Order</a>
+        </div>
+      </div>
+    </div>
+
+    {% if history %}
+    <div class="card">
+      <div class="card-header"><div class="card-title">Order History (same customer)</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Type</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for h in history %}
+          <tr>
+            <td><a href="{{ url_for('order_detail', order_id=h.id) }}" class="table-link">#{{ h.id }}</a></td>
+            <td style="font-size:12px;">{{ h.order_type }}</td>
+            <td style="font-weight:600;">₹{{ "%.0f"|format(h.total) }}</td>
+            <td>
+              {% set s = h.status %}
+              <span class="badge badge-{% if s=='Pending' %}pending{% elif s=='In Design' %}design{% elif s=='Printing' %}printing{% elif s=='Completed' %}completed{% else %}cancelled{% endif %}" style="font-size:10px;">{{ s }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
