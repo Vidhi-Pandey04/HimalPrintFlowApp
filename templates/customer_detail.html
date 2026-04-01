@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name }}{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="page-title">{{ customer.name }}</div>
+  <div class="topbar-actions">
+    <a href="{{ url_for('customers') }}" class="btn btn-outline">← Customers</a>
+    <a href="{{ url_for('new_order') }}?phone={{ customer.phone }}" class="btn btn-primary">+ New Order</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="two-col" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Customer Info</div></div>
+    <div class="card-body">
+      <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:8px;">{{ customer.name }}</div>
+      <div style="font-size:15px;margin-bottom:16px;">📱 {{ customer.phone }}</div>
+      <a href="https://wa.me/91{{ customer.phone }}" target="_blank" class="wa-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.108.549 4.088 1.51 5.813L.05 23.5l5.845-1.533A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.898a9.878 9.878 0 01-5.032-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.864 9.864 0 012.1 12c0-5.464 4.436-9.9 9.9-9.9s9.9 4.436 9.9 9.9-4.436 9.9-9.9 9.9z"/></svg>
+        Open WhatsApp
+      </a>
+      <div style="margin-top:14px;font-size:11px;color:var(--ink-light);">Customer since {{ customer.created_at[:10] }}</div>
+    </div>
+  </div>
+  <div class="stats-grid" style="margin-bottom:0;">
+    <div class="stat-card blue">
+      <div class="stat-icon">📋</div>
+      <div class="stat-value">{{ orders|length }}</div>
+      <div class="stat-label">Total Orders</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">💰</div>
+      <div class="stat-value">₹{{ "%.0f"|format(orders|selectattr('status','eq','Completed')|sum(attribute='total')) }}</div>
+      <div class="stat-label">Revenue</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">Order History</div></div>
+  <div class="table-wrap">
+    {% if orders %}
+    <table>
+      <thead><tr><th>#</th><th>Type</th><th>Description</th><th>Qty</th><th>Total</th><th>Status</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+      {% for o in orders %}
+      <tr>
+        <td><a href="{{ url_for('order_detail', order_id=o.id) }}" class="table-link">#{{ o.id }}</a></td>
+        <td>{{ o.order_type }}</td>
+        <td style="font-size:12px;color:var(--ink-soft);">{{ o.description or '—' }}</td>
+        <td>{{ o.quantity }}</td>
+        <td style="font-weight:700;">₹{{ "%.0f"|format(o.total) }}</td>
+        <td>
+          {% set s = o.status %}
+          <span class="badge badge-{% if s=='Pending' %}pending{% elif s=='In Design' %}design{% elif s=='Printing' %}printing{% elif s=='Completed' %}completed{% else %}cancelled{% endif %}">{{ s }}</span>
+        </td>
+        <td style="font-size:11px;color:var(--ink-light);">{{ o.created_at[:10] }}</td>
+        <td><a href="{{ url_for('order_detail', order_id=o.id) }}" class="btn btn-sm btn-outline">View</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><p>No orders yet for this customer.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="page-title">Dashboard</div>
+  <div class="topbar-actions">
+    <a href="{{ url_for('new_order') }}" class="btn btn-primary">➕ New Order</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Date Filter Bar -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-body" style="padding:14px 20px;">
+    <form method="GET" action="{{ url_for('dashboard') }}" id="filter-form"
+          style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+
+      <!-- Quick filters -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <a href="{{ url_for('dashboard') }}"
+           class="filter-btn {% if filter_type=='all' %}active{% endif %}">All Time</a>
+        <a href="{{ url_for('dashboard', filter='today') }}"
+           class="filter-btn {% if filter_type=='today' %}active{% endif %}">Today</a>
+        <a href="{{ url_for('dashboard', filter='month') }}"
+           class="filter-btn {% if filter_type=='month' and not month %}active{% endif %}">This Month</a>
+        <a href="{{ url_for('dashboard', filter='year') }}"
+           class="filter-btn {% if filter_type=='year' and not year %}active{% endif %}">This Year</a>
+      </div>
+
+      <div style="width:1px;height:28px;background:var(--border);margin:0 4px;"></div>
+
+      <!-- Month picker -->
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="month" name="month" id="month-input"
+               value="{{ month }}"
+               style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;"
+               onchange="document.getElementById('filter-type').value='month'; this.form.submit();">
+        <input type="hidden" name="filter" id="filter-type" value="{{ filter_type }}">
+      </div>
+
+      <!-- Year picker -->
+      <div style="display:flex;align-items:center;gap:6px;">
+        <select name="year" onchange="document.getElementById('filter-type').value='year'; this.form.submit();"
+                style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;background:#fff;">
+          <option value="">— Year —</option>
+          {% for yr in years %}
+          <option value="{{ yr }}" {% if year==yr %}selected{% endif %}>{{ yr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="width:1px;height:28px;background:var(--border);margin:0 4px;"></div>
+
+      <!-- Custom date range -->
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <input type="date" name="date_from" value="{{ date_from }}"
+               style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;">
+        <span style="font-size:12px;color:var(--ink-light);">to</span>
+        <input type="date" name="date_to" value="{{ date_to }}"
+               style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;">
+        <button type="submit" onclick="document.getElementById('filter-type').value='custom'"
+                class="btn btn-secondary btn-sm">Apply</button>
+      </div>
+
+      {% if filter_type != 'all' %}
+      <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline" style="margin-left:auto;">✕ Clear</a>
+      {% endif %}
+
+    </form>
+  </div>
+</div>
+
+<!-- Active filter label -->
+{% if filter_type != 'all' %}
+<div style="margin-bottom:16px;font-size:13px;color:var(--ink-soft);">
+  Showing:
+  {% if filter_type == 'today' %}<strong>Today</strong>
+  {% elif filter_type == 'month' and month %}<strong>{{ month }}</strong>
+  {% elif filter_type == 'month' %}<strong>This Month ({{ now.strftime('%B %Y') }})</strong>
+  {% elif filter_type == 'year' and year %}<strong>Year {{ year }}</strong>
+  {% elif filter_type == 'year' %}<strong>This Year ({{ now.year }})</strong>
+  {% elif filter_type == 'custom' %}<strong>{{ date_from }} to {{ date_to }}</strong>
+  {% endif %}
+</div>
+{% endif %}
+<div class="stats-grid">
+  <div class="stat-card orange">
+    <div class="stat-icon"></div>
+    <div class="stat-value">{{ total_orders }}</div>
+    <div class="stat-label">Total Orders</div>
+  </div>
+  <div class="stat-card yellow">
+    <div class="stat-icon"></div>
+    <div class="stat-value">{{ pending }}</div>
+    <div class="stat-label">Pending</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-icon"></div>
+    <div class="stat-value">{{ in_design }}</div>
+    <div class="stat-label">In Design</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="stat-icon"></div>
+    <div class="stat-value">{{ printing }}</div>
+    <div class="stat-label">Printing</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-icon"></div>
+    <div class="stat-value">{{ completed }}</div>
+    <div class="stat-label">Completed</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-icon"></div>
+    <div class="stat-value">₹{{ "%.0f"|format(revenue) }}</div>
+    <div class="stat-label">Revenue Collected</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-icon"></div>
+    <div class="stat-value">₹{{ "%.0f"|format(pending_revenue) }}</div>
+    <div class="stat-label">Pending Value</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Recent Orders</div>
+      <a href="{{ url_for('orders') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <div class="table-wrap">
+      {% if recent_orders %}
+      <table>
+        <thead><tr>
+          <th>#</th><th>Customer</th><th>Type</th><th>Total</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+        {% for o in recent_orders %}
+        <tr>
+          <td><a href="{{ url_for('order_detail', order_id=o.id) }}" class="table-link">#{{ o.id }}</a></td>
+          <td>
+            <div style="font-weight:600;font-size:13px;">{{ o.customer_name }}</div>
+            <div style="font-size:11px;color:var(--ink-light);">{{ o.phone }}</div>
+          </td>
+          <td style="font-size:12px;">{{ o.order_type }}</td>
+          <td style="font-weight:700;">₹{{ "%.0f"|format(o.total) }}</td>
+          <td>
+            {% set s = o.status %}
+            <span class="badge badge-{% if s=='Pending' %}pending{% elif s=='In Design' %}design{% elif s=='Printing' %}printing{% elif s=='Delivered' %}delivered{% elif s=='Completed' %}completed{% else %}cancelled{% endif %}">
+              {{ s }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No orders yet</h3>
+        <p><a href="{{ url_for('new_order') }}">Create your first order</a></p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Orders by Type</div>
+    </div>
+    <div class="card-body">
+      {% if order_type_stats %}
+      {% for stat in order_type_stats %}
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-size:13px;font-weight:600;">{{ stat.order_type }}</span>
+          <span style="font-size:12px;color:var(--ink-light);">{{ stat.count }} orders · ₹{{ "%.0f"|format(stat.revenue) }}</span>
+        </div>
+        <div style="background:var(--paper-dark);border-radius:4px;height:6px;overflow:hidden;">
+          <div style="background:var(--accent);height:100%;width: {{ stat.bar_width }}%;border-radius:4px ; "></div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty-state" style="padding:30px 0;">
+        <p>No data yet</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
