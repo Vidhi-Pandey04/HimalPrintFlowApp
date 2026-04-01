@@ -1,0 +1,11 @@
+himal.db
+himal.db.enc
+__pycache__/
+*.pyc
+*.pyo
+dist/
+build/
+*.spec
+*.log
+.env
+static/qr.jpeg
