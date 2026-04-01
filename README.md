@@ -143,7 +143,7 @@ himal/
 
 **1. Clone the repository**
 ```bash
-git clone https://github.com/yourusername/himal-printflow.git
+git clone https://github.com/Vidhi-Pandey04/HimalPrintFlowApp
 cd himal-printflow
 ```
 
