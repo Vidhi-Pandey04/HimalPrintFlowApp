@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Combined Bill — {{ customer.name }}{% endblock %}
+
+{% block topbar %}
+<div class="topbar no-print">
+  <div class="page-title">Bill — {{ customer.name }}</div>
+  <div class="topbar-actions">
+    <a href="{{ url_for('customer_detail', customer_id=customer.id) }}" class="btn btn-outline">← {{ customer.name }}</a>
+    {% if gst %}
+    <a href="{{ url_for('combined_bill', customer_id=customer.id, order_ids=request.args.get('order_ids',''), ) }}" class="btn btn-outline">Simple Bill</a>
+    {% else %}
+    <a href="{{ url_for('combined_bill', customer_id=customer.id, order_ids=request.args.get('order_ids',''), gst=1) }}" class="btn btn-outline">GST Invoice</a>
+    {% endif %}
+    <button onclick="window.print()" class="btn btn-primary">🖨️ Print</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if gst %}
+  {% set grand_base = grand_total / 1.18 %}
+  {% set gst_amt = grand_total - grand_base %}
+  {% set cgst = gst_amt / 2 %}
+  {% set sgst = gst_amt / 2 %}
+{% endif %}
+
+<div class="bill-paper">
+  <div class="bill-header">
+    <div class="bill-company">
+      <h1>Himal Press</h1>
+      <p>(Himal Printers and Publishers)</p>
+      <p style="margin-top:6px;font-size:11px;color:var(--ink-soft);">
+        📍 Bank Road, Siltham, Pithoragarh, 262501<br>
+        📞 9997803536 📧 himalprasang@gmail.com
+      </p>
+      {% if gst %}<p style="margin-top:4px;font-size:11px;">GSTIN: <strong>YOUR-GSTIN-HERE</strong></p>{% endif %}
+    </div>
+    <div class="bill-meta">
+      <div class="bill-no">{% if gst %}INVOICE{% else %}BILL{% endif %}</div>
+      <p>Date: {{ orders[-1].created_at[:10] }}</p>
+      <p style="font-size:11px;color:var(--ink-soft);">{{ orders|length }} order(s)</p>
+      {% if gst %}<p style="margin-top:6px;padding:4px 8px;background:var(--accent-pale);border-radius:4px;font-size:11px;font-weight:700;color:var(--accent);">TAX INVOICE</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="bill-to">
+    <label>Bill To</label>
+    <div class="name">{{ customer.name }}</div>
+    <div class="phone">📱 {{ customer.phone }}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40px;">#</th>
+        <th>Description</th>
+        <th style="text-align:right;">Qty</th>
+        <th style="text-align:right;">Rate</th>
+        <th style="text-align:right;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set row_num = namespace(value=1) %}
+      {% for order in orders %}
+        {# ── Section header row for each order ── #}
+        <tr style="background:var(--surface-alt, #f7f7f7);">
+          <td colspan="5" style="font-size:11px;font-weight:700;color:var(--ink-soft);padding:6px 10px;letter-spacing:.04em;">
+            Order ID #{{ order.id }} &nbsp;·&nbsp; {{ order.created_at[:10] }}
+            &nbsp;·&nbsp;
+            {% set s = order.status %}
+            <span class="badge badge-{% if s=='Pending' %}pending{% elif s=='In Design' %}design{% elif s=='Printing' %}printing{% elif s=='Delivered' %}delivered{% elif s=='Completed' %}completed{% else %}cancelled{% endif %}" style="font-size:9px;">{{ s }}</span>
+          </td>
+        </tr>
+
+        {% if order.design_cost > 0 %}
+        <tr>
+          <td>{{ row_num.value }}</td>
+          <td>
+            <strong>Design Service</strong><br>
+            <span style="font-size:11px;color:var(--ink-light);">{{ order.order_type }} — Design charges</span>
+          </td>
+          <td style="text-align:right;">1</td>
+          <td style="text-align:right;">₹{{ "%.2f"|format(order.design_cost) }}</td>
+          <td style="text-align:right;font-weight:600;">₹{{ "%.2f"|format(order.design_cost) }}</td>
+        </tr>
+        {% set row_num.value = row_num.value + 1 %}
+        {% endif %}
+
+        {% if order.printing_cost > 0 %}
+        <tr>
+          <td>{{ row_num.value }}</td>
+          <td>
+            <strong>{{ order.order_type }} — Printing</strong><br>
+            <span style="font-size:11px;color:var(--ink-light);">{{ order.description or 'Printing charges' }}</span>
+          </td>
+          <td style="text-align:right;">{{ order.quantity }}</td>
+          <td style="text-align:right;">₹{{ "%.2f"|format(order.printing_cost) }}</td>
+          <td style="text-align:right;font-weight:600;">₹{{ "%.2f"|format(order.printing_cost * order.quantity) }}</td>
+        </tr>
+        {% set row_num.value = row_num.value + 1 %}
+        {% endif %}
+
+        {% if order.design_cost == 0 and order.printing_cost == 0 %}
+        <tr>
+          <td>{{ row_num.value }}</td>
+          <td>
+            <strong>{{ order.order_type }}</strong><br>
+            <span style="font-size:11px;color:var(--ink-light);">{{ order.description or '' }}</span>
+          </td>
+          <td style="text-align:right;">{{ order.quantity }}</td>
+          <td style="text-align:right;">₹{{ "%.2f"|format(order.total) }}</td>
+          <td style="text-align:right;font-weight:600;">₹{{ "%.2f"|format(order.total) }}</td>
+        </tr>
+        {% set row_num.value = row_num.value + 1 %}
+        {% endif %}
+
+        {# Per-order subtotal + discount if applicable #}
+        {% if order.discount > 0 %}
+        <tr style="font-size:11px;color:var(--green);">
+          <td colspan="4" style="text-align:right;padding-right:12px;">Discount on Order #{{ order.id }}</td>
+          <td style="text-align:right;">− ₹{{ "%.2f"|format(order.discount) }}</td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="bill-total">
+    {% if total_discount > 0 %}
+    <div class="bill-total-row" style="color:var(--green);">
+      <span>Total Discount</span>
+      <span>− ₹{{ "%.2f"|format(total_discount) }}</span>
+    </div>
+    {% endif %}
+    {% if gst %}
+    <div class="bill-total-row">
+      <span>Subtotal (excl. GST)</span>
+      <span>₹{{ "%.2f"|format(grand_base) }}</span>
+    </div>
+    <div class="bill-total-row">
+      <span>CGST (9%)</span>
+      <span>₹{{ "%.2f"|format(cgst) }}</span>
+    </div>
+    <div class="bill-total-row">
+      <span>SGST (9%)</span>
+      <span>₹{{ "%.2f"|format(sgst) }}</span>
+    </div>
+    {% endif %}
+    <div class="bill-total-row grand">
+      <span>Grand Total</span>
+      <span>₹{{ "%.2f"|format(grand_total) }}</span>
+    </div>
+  </div>
+
+  <div class="bill-footer">
+    <div>
+      <strong>Thank you for your business!</strong><br>
+      Payment is due on receipt.
+    </div>
+    <div style="text-align:center;">
+      <img src="{{ url_for('static', filename='qr.jpeg') }}"
+           alt="UPI QR Code"
+           style="width:150px;height:150px;object-fit:contain;display:block;margin:0 auto 6px;">
+      <div style="font-size:11px;font-weight:700;color:var(--ink);">UPI No: 9997803536</div>
+      <div style="font-size:10px;color:var(--ink-light);margin-top:2px;">Scan to pay</div>
+    </div>
+    <div style="text-align:right;">
+      Authorized Signatory<br>
+      <strong>Himal Printers and Publishers</strong>
+    </div>
+  </div>
+</div>
+{% endblock %}
